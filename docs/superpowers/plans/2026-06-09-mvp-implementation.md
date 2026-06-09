@@ -28,7 +28,7 @@
 | 4. 详情页 | 详情页 + 出行须知折叠组件 | 2 | 完整详情体验 |
 | 5. 认证系统 | Auth.js 配置 + 注册/登录 API + 页面 + middleware | 7 | 用户可注册登录，路由守卫生效 |
 | 6. UGC 投稿与评论 | 发帖 API + 页面 + 评论 API + CommentSection + 评论删除 | 5 | 用户可发帖和评论 |
-| 7. 社交互动 | 点赞 + 收藏 API + LikeButton/FavoriteButton + 集成详情页 | 4 | 点赞收藏功能完整 |
+| 7. 社交互动 | 点赞 + 收藏 API + LikeButton/FavoriteButton + 集成详情页 + 补充 isLiked/isFavorited | 5 | 点赞收藏功能完整 |
 | 8. 个人中心 | Profile API + Profile 页面 + Header 导航升级 | 3 | 用户可查看个人数据 |
 | 9. 后台管理 | 权限工具 + API（拆为 7 个小任务） + 4 个管理页面 | 12 | 管理员可审核和管理 |
 | 10. 首页完整集成 | 搜索 + 筛选 + 盲盒 + Hero 组装 | 3 | 完整首页体验 |
@@ -465,8 +465,10 @@ $r.data[0].title  # 应输出标题字符串
 - Create: `src/app/api/trips/[id]/route.ts`
 
 **实现内容:**
-- `GET`: 查询单条 Trip by id，include tags + author。如果 status 非 APPROVED 且请求者不是作者 → 404。已登录用户额外查询 `isLiked` 和 `isFavorited` 布尔值（via auth() session）。
-- `PATCH` 和 `DELETE` 暂返回 501。
+- `GET`: 查询单条 Trip by id，include tags + author。如果 status 非 APPROVED → 返回 404（阶段 6 前无 UGC，所有 PENDING/REJECTED trip 对所有人不可见）。返回全部公开字段（id/title/summary/story/theme/location/bestTime/difficulty/budget/safety/highlights/emoji/imageUrl/isOfficial/status/likeCount/favoriteCount/tags/author/createdAt/updatedAt）。
+- **不调用 auth()**，**不依赖 src/lib/auth.ts**。
+- **阶段 3 暂不返回 `isLiked` / `isFavorited` 字段**。该字段将在阶段 7 完成点赞收藏功能后，由 Task 7.5 补充。
+- `PATCH` 和 `DELETE` 暂返回 501（阶段 6 和阶段 9 补全）。
 
 **验收标准:**
 ```powershell
@@ -975,6 +977,19 @@ npx tsx -e "import { LikeButton } from './src/components/ui/LikeButton'; import 
 
 ---
 
+#### Task 7.5: 补充详情接口的 isLiked / isFavorited 字段
+
+**文件:**
+- Modify: `src/app/api/trips/[id]/route.ts`
+
+**实现内容:** 在 GET handler 中引入 `auth()` 获取当前登录 session。如果用户已登录，查询 Like 表确认 `isLiked`，查询 Favorite 表确认 `isFavorited`，返回真实布尔值。未登录时这两个字段不返回（阶段 3 暂不返回，此处补全）。遵循 API_CONTRACT 3.2 节的定义。
+
+**验收标准:** （1）未登录请求详情接口 → 响应不含 isLiked/isFavorited（或为 false）；（2）登录后请求已点赞的 trip → isLiked=true；（3）登录后请求未点赞的 trip → isLiked=false；（4）收藏同理。
+
+**推荐 commit:** `feat(detail): add isLiked and isFavorited fields to detail endpoint`
+
+---
+
 ### 阶段 8：个人中心
 
 #### Task 8.1: 创建个人中心 API
@@ -1349,6 +1364,8 @@ npx playwright test
 ### 架构依赖
 - ✅ middleware 已后移至阶段 5（Auth.js 配置完成后），不再引用尚未创建的 `src/lib/auth.ts`
 - ✅ 阶段 1 基础设施不再包含任何需要 Auth.js 的模块
+- ✅ Task 3.2 详情接口不调用 auth()，不依赖 Auth.js，**暂不返回 isLiked / isFavorited**
+- ✅ Task 7.5 在点赞收藏功能完成后补充 isLiked / isFavorited，保证最终交付与 API_CONTRACT 一致
 
 ### 接口一致性
 - ✅ 盲盒接口已统一为 `GET /api/blindbox`（对应 API_CONTRACT），使用 `src/app/api/blindbox/route.ts`
