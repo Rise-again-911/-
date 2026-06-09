@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 
 interface SearchBarProps {
   value: string;
@@ -15,18 +15,53 @@ export function SearchBar({
   placeholder = "搜索旅行灵感...",
   onSearch,
 }: SearchBarProps) {
-  const [, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const composingRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleSearch = useCallback(
+    (query: string) => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        if (!composingRef.current) {
+          onSearch(query);
+        }
+      }, 300);
+    },
+    [onSearch]
+  );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const v = e.target.value;
       onChange(v);
-      setTimer((prev) => {
-        if (prev) clearTimeout(prev);
-        return setTimeout(() => onSearch(v), 300);
-      });
+      if (!composingRef.current) {
+        scheduleSearch(v);
+      }
     },
-    [onChange, onSearch]
+    [onChange, scheduleSearch]
+  );
+
+  const handleCompositionStart = useCallback(() => {
+    composingRef.current = true;
+  }, []);
+
+  const handleCompositionEnd = useCallback(
+    (e: React.CompositionEvent<HTMLInputElement>) => {
+      composingRef.current = false;
+      const v = (e.target as HTMLInputElement).value;
+      onSearch(v);
+    },
+    [onSearch]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter" && !composingRef.current) {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        onSearch(value);
+      }
+    },
+    [onSearch, value]
   );
 
   return (
@@ -49,6 +84,9 @@ export function SearchBar({
         type="search"
         value={value}
         onChange={handleChange}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder}
         className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-gray-600"
         aria-label={placeholder}
