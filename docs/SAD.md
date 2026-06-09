@@ -180,6 +180,10 @@ graph TB
 | **JWT 策略** | 无需数据库 Session 表，减少状态管理 |
 | **中间件支持** | `middleware.ts` 中直接使用 `auth()` 做路由守卫 |
 
+**客户端认证上下文：**
+
+Auth.js 的服务端认证能力由 `src/lib/auth.ts` 提供（`auth()`、`signIn()`、`signOut()`）。当客户端组件（如 `CommentSection`）需要读取当前登录状态时，不能直接调用服务端的 `auth()`。此时通过 `src/components/layout/AuthProvider.tsx` 封装 `next-auth/react` 的 `SessionProvider`，并在 `src/app/layout.tsx` 中包裹全局应用，为所有客户端组件提供 `useSession()` hook 可用的 session 上下文。该 Provider 仅提供 session 读取能力，不承载权限判断、动态 Header、个人中心、后台管理、点赞收藏等业务功能。
+
 ### 3.5 为什么选择 Vercel
 
 | 原因 | 说明 |
@@ -210,7 +214,7 @@ xiyouji/
 │
 ├── src/
 │   ├── app/                       # Next.js App Router（页面 + API）
-│   │   ├── layout.tsx             #   根布局
+│   │   ├── layout.tsx             #   全局布局，包裹 AuthProvider 与 Header
 │   │   ├── page.tsx               #   首页 /
 │   │   ├── trips/
 │   │   │   └── [id]/
@@ -288,6 +292,7 @@ xiyouji/
 │   │   │   ├── CommentSection.tsx #     评论区
 │   │   │   └── EmptyState.tsx     #     空状态
 │   │   ├── layout/                #   布局组件
+│   │   │   ├── AuthProvider.tsx    #     next-auth SessionProvider 客户端包装器
 │   │   │   ├── Header.tsx         #     顶部导航
 │   │   │   └── AdminSidebar.tsx   #     管理端侧边栏
 │   │   └── forms/                 #   表单组件

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { tripCreateSchema } from "@/lib/validations";
+import { handleZodError, apiSuccess, apiError } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -59,9 +62,54 @@ export async function GET(request: NextRequest) {
   );
 }
 
-export async function POST() {
-  return NextResponse.json(
-    { error: { code: "NOT_IMPLEMENTED", message: "POST /api/trips 将在阶段 6 实现" } },
-    { status: 501 }
+export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return apiError("UNAUTHORIZED", "请先登录", 401);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return apiError("BAD_REQUEST", "请求体格式错误", 400);
+  }
+
+  const parsed = tripCreateSchema.safeParse(body);
+  if (!parsed.success) return handleZodError(parsed.error);
+
+  const { tagIds, ...tripData } = parsed.data;
+  const userId = (session.user as { id: string }).id;
+
+  // Validate all tagIds exist
+  const tags = await prisma.tag.findMany({ where: { id: { in: tagIds } } });
+  if (tags.length !== tagIds.length) {
+    return apiError("INVALID_TAGS", "部分标签 ID 不存在", 400);
+  }
+
+  const trip = await prisma.trip.create({
+    data: {
+      ...tripData,
+      highlights: JSON.stringify(tripData.highlights),
+      authorId: userId,
+      status: "PENDING",
+      isOfficial: false,
+      tripTags: {
+        create: tagIds.map((tagId) => ({ tagId })),
+      },
+    },
+    include: {
+      tripTags: { include: { tag: true } },
+    },
+  });
+
+  return apiSuccess(
+    {
+      id: trip.id,
+      title: trip.title,
+      status: trip.status,
+    },
+    "投稿成功，等待审核",
+    201
   );
 }

@@ -836,6 +836,10 @@ export const config = {
 
 ### 阶段 6：UGC 投稿与评论
 
+**阶段 6 边界补充：AuthProvider 与 layout.tsx**
+
+如果 CommentSection 使用 `useSession()` 判断登录态，允许新增 `src/components/layout/AuthProvider.tsx`（4 行 SessionProvider wrapper），并在 `src/app/layout.tsx` 中用 `<AuthProvider>` 包裹 `<Header />` 和 `{children}`。该改动仅用于提供 next-auth SessionProvider 基础设施，不得引入动态 Header（阶段 8）、个人中心、后台、点赞收藏等阶段外功能。
+
 #### Task 6.1: 实现 POST /api/trips（创建帖子）
 
 **文件:**

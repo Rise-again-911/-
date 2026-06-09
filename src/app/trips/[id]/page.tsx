@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { TagChip, type TagType } from "@/components/ui/TagChip";
 import { TravelInfo } from "@/components/ui/TravelInfo";
+import { CommentSection } from "@/components/ui/CommentSection";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -158,6 +159,11 @@ export default async function TripDetailPage({ params }: PageProps) {
           budget={trip.budget}
           safety={trip.safety}
         />
+      </section>
+
+      {/* Comments */}
+      <section className="px-5 pt-6 pb-12">
+        <CommentSection tripId={trip.id} />
       </section>
     </main>
   );
