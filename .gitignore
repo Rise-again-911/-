@@ -5,6 +5,12 @@ build/
 .expo/
 .cache/
 .env
+.env.local
 *.log
 .vscode/
 .claude/
+
+# SQLite local database
+*.db
+prisma/dev.db
+prisma/prisma/dev.db
