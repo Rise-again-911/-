@@ -783,17 +783,52 @@ $r.data.role      # 应输出 USER
 **文件:**
 - Create: `src/middleware.ts`
 
-**实现内容:** Auth.js 完成后，创建 middleware 做路由守卫：
+**实现内容:** middleware 需要做两层判断：
+1. 未登录用户访问 `/create`、`/profile`、`/admin/:path*` → 重定向 `/login`
+2. 已登录但 role 不是 ADMIN 的用户访问 `/admin/:path*` → 重定向 `/`
+3. role 是 ADMIN 的用户访问 `/admin/:path*` → 放行
+
+如果简单使用 `export { auth as middleware } from "@/lib/auth"` 无法完成角色判断（Auth.js 中间件返回的函数不支持自定义 redirect 逻辑），请改为显式 middleware 逻辑：
+
 ```typescript
-export { auth as middleware } from "@/lib/auth";
+import { auth } from "@/lib/auth";
+import { NextResponse } from "next/server";
+
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
+  const isLoggedIn = !!req.auth;
+  const role = (req.auth?.user as { role?: string })?.role;
+
+  // 未登录 → 重定向 /login
+  if (!isLoggedIn) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  // 已登录但非 ADMIN → 重定向 / （仅对 admin 路径）
+  if (pathname.startsWith("/admin") && role !== "ADMIN") {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
+  // ADMIN 访问 /admin → 放行
+  return NextResponse.next();
+});
 
 export const config = {
   matcher: ["/create", "/profile", "/admin/:path*"],
 };
 ```
-未登录访问 `/create` `/profile` → 重定向 `/login`。非 admin 访问 `/admin/*` → 重定向 `/`。
 
-**验收标准:** （1）未登录状态下浏览器访问 `http://localhost:3000/create` → 自动跳转到 `/login`；（2）登录 admin 后访问 `http://localhost:3000/admin` → 能正常看到管理页面；（3）用普通用户登录后访问 `http://localhost:3000/admin` → 被重定向到 `/`。
+**说明:**
+- 阶段 5 不创建后台页面（阶段 9 才创建）。admin 被放行后访问 `/admin` 会看到 404，这是阶段 5 的正常边界。
+- 阶段 5 不创建 `/create` 和 `/profile` 页面（阶段 6 和阶段 8 创建）。middleware 的重定向行为可以独立于目标页面存在。
+
+**验收标准:**
+1. 未登录访问 `http://localhost:3000/create` → 跳转 `/login`
+2. 未登录访问 `http://localhost:3000/profile` → 跳转 `/login`
+3. 未登录访问 `http://localhost:3000/admin` → 跳转 `/login`
+4. 普通用户登录后访问 `http://localhost:3000/admin` → 跳转 `/`
+5. admin 登录后访问 `http://localhost:3000/admin` → 不应跳转到 `/login` 或 `/`，允许显示 404（阶段 9 才创建 admin 页面）
+6. 上述第 5 条的 404 不算失败，阶段 5 只验收路由守卫逻辑，不验收后台页面内容
 
 **推荐 commit:** `feat(auth): add middleware for route protection`
 
