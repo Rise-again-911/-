@@ -16,8 +16,10 @@
 8. [默认测试账号](#8-默认测试账号)
 9. [开发文档](#9-开发文档)
 10. [MVP 边界](#10-mvp-边界)
-11. [部署说明](#11-部署说明)
-12. [黑客松交付说明](#12-黑客松交付说明)
+11. [测试与质量验证](#11-测试与质量验证)
+12. [部署说明](#12-部署说明)
+13. [Git Commit 演进历史说明](#13-git-commit-演进历史说明)
+14. [黑客松交付说明](#14-黑客松交付说明)
 
 ---
 
@@ -202,6 +204,9 @@ openssl rand -base64 32
 | ERD | `docs/ERD.md` | 实体关系设计：7 个实体的 Mermaid ER 图 + 中文表说明 + 关系总结 + 设计原理 |
 | API Contract | `docs/API_CONTRACT.md` | API 接口契约：33 个端点的 Method/URL/鉴权/参数/请求示例/响应示例/错误码 |
 | SAD | `docs/SAD.md` | 软件架构设计：系统目标、整体架构 Mermaid 图、技术选型理由、数据流 Sequence Diagram、权限设计、安全设计、部署架构 |
+| Test Report | `docs/TEST_REPORT.md` | 测试报告：TypeScript 类型检查、Vitest 单元测试、Playwright E2E 测试的完整结果记录 |
+| Prompt Records | `docs/PROMPTS.md` | 核心 Prompt 记录：SDD / DDD / TDD / E2E / Debug / Code Review / Delivery 各阶段的关键 Prompt 及工程反思 |
+| Workflow | `docs/WORKFLOW.md` | 开发过程思路 & 工作流说明：Claude Code + Superpowers 多范式协作流程、5 个典型问题及解决路径、工程化 AI 开发理解 |
 
 ---
 
@@ -240,7 +245,53 @@ openssl rand -base64 32
 
 ---
 
-## 11. 部署说明
+## 11. 测试与质量验证
+
+### 运行测试
+
+```bash
+# 类型检查
+npx tsc --noEmit
+
+# 单元测试
+npx vitest run
+
+# E2E 测试
+npx playwright test
+```
+
+### 当前测试结果
+
+| 测试类型 | 状态 | 结果 |
+|----------|------|------|
+| TypeScript 类型检查 | ✅ 通过 | 零错误 |
+| Vitest 单元测试 | ✅ 通过 | 25 tests passed |
+| Playwright E2E 测试 | ✅ 通过 | 13 tests passed |
+
+### 单元测试覆盖
+
+| 模块 | 测试内容 |
+|------|---------|
+| 搜索引擎 | `mapKeyword()` 关键词映射（"没人"→"反向小城"、"星空"→"暗夜星旅"、"废墟"→"废墟美学"、无关词返回空） |
+| 注册校验 | `registerSchema` 用户名长度/字符限制、密码最小长度 |
+| 登录校验 | `loginSchema` 空用户名/密码拦截 |
+| 投稿校验 | `tripCreateSchema` highlights 最少 3 条、主题枚举值、标题长度限制、tagIds 非空 |
+| 评论校验 | `commentSchema` 空内容拦截、最大 500 字符限制 |
+| 个人资料校验 | `profileUpdateSchema` bio 最大 200 字符、字段可选 |
+
+### E2E 测试覆盖
+
+| 测试文件 | 覆盖流程 |
+|----------|---------|
+| `home.spec.ts` | 首页加载与卡片展示、搜索框输入与结果、标签云渲染、标签筛选与清除、盲盒跳转详情页、Header 未登录态 |
+| `auth.spec.ts` | 登录页渲染、admin 登录流程（→Header 显示"后台"）、未登录 /create 重定向 /login、注册页渲染 |
+| `admin.spec.ts` | admin 登录后访问后台统计面板、侧边栏导航切换、非 admin 访问后台拦截 |
+
+详细测试报告见 [`docs/TEST_REPORT.md`](./docs/TEST_REPORT.md)。
+
+---
+
+## 12. 部署说明
 
 ### 本地开发（完整功能）
 
@@ -266,7 +317,59 @@ pnpm dev
 
 ---
 
-## 12. 黑客松交付说明
+## 13. Git Commit 演进历史说明
+
+本项目采用**阶段化提交策略**，Git 提交历史用于体现 AI 辅助开发的工程演进过程。
+
+### 提交顺序
+
+```
+docs/schema → runtime/seed → ui-components → feature logic → tests → delivery docs
+```
+
+### 各类 Commit 含义
+
+| commit 前缀 | 说明 |
+|-------------|------|
+| `docs:` | PRD、ERD、API 契约、SAD、Prompt 记录、工作流说明 |
+| `chore:` | 工程初始化、依赖配置、数据库初始化、seed 数据 |
+| `feat:` | 核心功能实现，包括首页、详情页、认证、投稿、互动、个人中心、后台管理 |
+| `test:` | Vitest 单元测试与 Playwright E2E 测试 |
+| `fix:` | 搜索、筛选、盲盒、Header 后台入口等问题修复 |
+
+### 演进路径
+
+```
+项目启动 & 文档基线
+    ↓
+数据库 Schema & Seed
+    ↓
+基础设施 & 标签系统
+    ↓
+内容浏览 & 详情页
+    ↓
+认证系统 & 路由守卫
+    ↓
+UGC 投稿 & 评论
+    ↓
+社交互动（点赞/收藏）
+    ↓
+个人中心 & Header 动态导航
+    ↓
+后台管理系统
+    ↓
+首页完整集成（搜索/筛选/盲盒）
+    ↓
+测试（Vitest + Playwright）
+    ↓
+最终交付文档（PROMPTS / WORKFLOW / TEST_REPORT）
+```
+
+评委可以通过 GitHub 仓库的 Commit History 查看项目从文档、数据模型、页面组件、业务逻辑、测试到最终交付文档的完整演进过程。
+
+---
+
+## 14. 黑客松交付说明
 
 本项目已包含以下交付物：
 
@@ -282,3 +385,9 @@ pnpm dev
 | README 运行说明 | ✅ |
 | 后台管理测试账号 | ✅ |
 | 幂等 seed 脚本（可重复执行） | ✅ |
+| Vitest 单元测试（25 tests） | ✅ |
+| Playwright E2E 测试（13 tests） | ✅ |
+| 测试报告 `docs/TEST_REPORT.md` | ✅ |
+| 核心 Prompt 记录 `docs/PROMPTS.md` | ✅ |
+| 开发过程工作流说明 `docs/WORKFLOW.md` | ✅ |
+| Git Commit 演进历史 | ✅ |
