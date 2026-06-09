@@ -308,6 +308,9 @@ xiyouji/
 │   ├── API_CONTRACT.md            #   API 契约
 │   └── SAD.md                     #   软件架构设计（本文档）
 │
+├── scripts/                       # 开发辅助脚本
+│   └── check-seed.ts              #   数据库种子数据验证脚本
+│
 ├── public/                        # 静态资源
 │   └── images/                    #   氛围图（后续替换）
 │
@@ -334,6 +337,7 @@ xiyouji/
 | `prisma/` | 数据库 Schema + 迁移 + 种子 | 数据库单一事实来源 |
 | `docs/` | 项目文档 | PRD/ERD/API/SAD 独立文件 |
 | `tests/` | 测试代码 | 按测试类型分层 |
+| `scripts/` | 开发辅助脚本 | `check-seed.ts` 是数据库种子数据验证脚本，用于在执行 `prisma/seed.ts` 后检查用户、标签、Trip、评论、点赞、收藏等种子数据是否完整，确保数据库初始化结果符合黑客松交付要求 |
 
 ---
 
