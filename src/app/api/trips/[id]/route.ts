@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const session = await auth();
+  const userId = (session?.user as { id?: string })?.id;
 
   const trip = await prisma.trip.findUnique({
     where: { id },
@@ -20,6 +23,21 @@ export async function GET(
       { error: { code: "NOT_FOUND", message: "Trip 不存在" } },
       { status: 404 }
     );
+  }
+
+  let isLiked = false;
+  let isFavorited = false;
+  if (userId) {
+    const [like, favorite] = await Promise.all([
+      prisma.like.findUnique({
+        where: { userId_tripId: { userId, tripId: id } },
+      }),
+      prisma.favorite.findUnique({
+        where: { userId_tripId: { userId, tripId: id } },
+      }),
+    ]);
+    isLiked = !!like;
+    isFavorited = !!favorite;
   }
 
   const highlights = (() => {
@@ -50,6 +68,8 @@ export async function GET(
         status: trip.status,
         likeCount: trip.likeCount,
         favoriteCount: trip.favoriteCount,
+        isLiked,
+        isFavorited,
         tags: trip.tripTags.map((tt) => ({
           id: tt.tag.id,
           name: tt.tag.name,

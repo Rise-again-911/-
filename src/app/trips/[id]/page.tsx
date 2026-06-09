@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { TagChip, type TagType } from "@/components/ui/TagChip";
 import { TravelInfo } from "@/components/ui/TravelInfo";
 import { CommentSection } from "@/components/ui/CommentSection";
+import { LikeButton } from "@/components/ui/LikeButton";
+import { FavoriteButton } from "@/components/ui/FavoriteButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -13,6 +16,8 @@ const HIGHLIGHT_ICONS = ["📷", "🌊", "🤫", "🎯", "📍"];
 
 export default async function TripDetailPage({ params }: PageProps) {
   const { id } = await params;
+  const session = await auth();
+  const userId = (session?.user as { id?: string })?.id;
 
   const trip = await prisma.trip.findUnique({
     where: { id },
@@ -24,6 +29,21 @@ export default async function TripDetailPage({ params }: PageProps) {
 
   if (!trip || trip.status !== "APPROVED") {
     notFound();
+  }
+
+  let isLiked = false;
+  let isFavorited = false;
+  if (userId) {
+    const [like, favorite] = await Promise.all([
+      prisma.like.findUnique({
+        where: { userId_tripId: { userId, tripId: id } },
+      }),
+      prisma.favorite.findUnique({
+        where: { userId_tripId: { userId, tripId: id } },
+      }),
+    ]);
+    isLiked = !!like;
+    isFavorited = !!favorite;
   }
 
   const tags: { id: string; name: string; type: TagType }[] = trip.tripTags.map((tt) => ({
@@ -149,6 +169,22 @@ export default async function TripDetailPage({ params }: PageProps) {
           </div>
         </section>
       )}
+
+      {/* Stats */}
+      <section className="px-5 pt-2 pb-4">
+        <div className="flex items-center gap-3">
+          <LikeButton
+            tripId={trip.id}
+            initialLiked={isLiked}
+            initialCount={trip.likeCount}
+          />
+          <FavoriteButton
+            tripId={trip.id}
+            initialFavorited={isFavorited}
+            initialCount={trip.favoriteCount}
+          />
+        </div>
+      </section>
 
       {/* Travel Info */}
       <section className="px-5 pt-2">
