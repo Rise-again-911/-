@@ -1,0 +1,169 @@
+// ============================================
+// 「100种不可思议旅行」Prisma Schema
+// 数据库：SQLite
+// 来源：docs/PRD.md + docs/ERD.md
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 枚举
+// ============================================
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum TripStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TagType {
+  THEME
+  MOOD
+  LEVEL
+}
+
+// ============================================
+// 用户
+// ============================================
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String
+  avatar       String    @default("")
+  bio          String    @default("")
+  role         UserRole  @default(USER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  trips     Trip[]
+  comments  Comment[]
+  likes     Like[]
+  favorites Favorite[]
+}
+
+// ============================================
+// 旅行灵感
+// ============================================
+
+model Trip {
+  id            String     @id @default(cuid())
+  title         String
+  summary       String
+  story         String
+  theme         String
+  location      String
+  bestTime      String
+  difficulty    String
+  budget        String
+  safety        String
+  highlights    String                    // JSON array string
+  emoji         String     @default("📍")
+  imageUrl      String     @default("")
+  authorId      String
+  isOfficial    Boolean    @default(false)
+  status        TripStatus @default(PENDING)
+  likeCount     Int        @default(0)
+  favoriteCount Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  author    User       @relation(fields: [authorId], references: [id])
+  tripTags  TripTag[]
+  comments  Comment[]
+  likes     Like[]
+  favorites Favorite[]
+
+  @@index([theme])
+  @@index([status])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+// ============================================
+// 标签字典
+// ============================================
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  type      TagType
+  createdAt DateTime @default(now())
+
+  tripTags TripTag[]
+}
+
+// ============================================
+// Trip <-> Tag 多对多关联
+// ============================================
+
+model TripTag {
+  tripId String
+  tagId  String
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, tagId])
+}
+
+// ============================================
+// 评论
+// ============================================
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  tripId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+}
+
+// ============================================
+// 点赞
+// ============================================
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  tripId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tripId])
+}
+
+// ============================================
+// 收藏
+// ============================================
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  tripId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tripId])
+}
