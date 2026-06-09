@@ -41,6 +41,7 @@ export function LoginForm() {
         </label>
         <input
           id="login-username"
+          name="username"
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -57,6 +58,7 @@ export function LoginForm() {
         </label>
         <input
           id="login-password"
+          name="password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
