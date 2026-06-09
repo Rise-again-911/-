@@ -5,6 +5,8 @@ import { useSession, signOut } from "next-auth/react";
 
 export function Header() {
   const { data: session } = useSession();
+  const role = (session?.user as { role?: string })?.role;
+  const username = (session?.user as { name?: string })?.name;
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/90 backdrop-blur" role="banner">
@@ -34,8 +36,16 @@ export function Header() {
                 href="/profile"
                 className="rounded-md px-3 py-2 text-sm text-gray-400 transition-colors duration-200 hover:bg-white/5 hover:text-gray-200"
               >
-                {(session.user as { name?: string })?.name ?? "个人中心"}
+                {username ?? "个人中心"}
               </Link>
+              {role === "ADMIN" && (
+                <Link
+                  href="/admin"
+                  className="rounded-md px-3 py-2 text-sm text-gray-400 transition-colors duration-200 hover:bg-white/5 hover:text-gray-200"
+                >
+                  后台
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => signOut({ callbackUrl: "/" })}
